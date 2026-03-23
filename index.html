@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exam Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <!-- ── AUTH SCREEN ── -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-bg">
+      <div class="auth-blob blob1"></div>
+      <div class="auth-blob blob2"></div>
+      <div class="auth-blob blob3"></div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="auth-logo-icon">⬡</span>
+        <span class="auth-logo-text">ExamTracker</span>
+      </div>
+      <p class="auth-tagline">Study smarter. Track everything.</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="loginTab" onclick="switchAuthTab('login')">Sign In</button>
+        <button class="auth-tab" id="signupTab" onclick="switchAuthTab('signup')">Sign Up</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="auth-form" id="loginForm">
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" class="auth-input" />
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="loginPassword" placeholder="••••••••" class="auth-input" />
+            <button class="eye-btn" onclick="togglePass('loginPassword', this)">👁</button>
+          </div>
+        </div>
+        <div class="auth-forgot">
+          <button onclick="forgotPassword()" class="link-btn">Forgot password?</button>
+        </div>
+        <button class="auth-submit" id="loginBtn" onclick="handleLogin()">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-loader" style="display:none">⏳</span>
+        </button>
+        <p class="auth-switch">Don't have an account? <button onclick="switchAuthTab('signup')" class="link-btn">Sign up
+            free</button></p>
+      </div>
+
+      <!-- SIGNUP -->
+      <div class="auth-form" id="signupForm" style="display:none">
+        <div class="auth-field">
+          <label>Full Name</label>
+          <input type="text" id="signupName" placeholder="Your name" class="auth-input" />
+        </div>
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" class="auth-input" />
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="signupPassword" placeholder="Min 6 characters" class="auth-input" />
+            <button class="eye-btn" onclick="togglePass('signupPassword', this)">👁</button>
+          </div>
+          <div class="password-strength" id="pwStrength"></div>
+        </div>
+        <div class="auth-field">
+          <label>Confirm Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="signupConfirm" placeholder="Repeat password" class="auth-input" />
+            <button class="eye-btn" onclick="togglePass('signupConfirm', this)">👁</button>
+          </div>
+        </div>
+        <button class="auth-submit" id="signupBtn" onclick="handleSignup()">
+          <span class="btn-text">Create Account</span>
+          <span class="btn-loader" style="display:none">⏳</span>
+        </button>
+        <p class="auth-switch">Already have an account? <button onclick="switchAuthTab('login')" class="link-btn">Sign
+            in</button></p>
+      </div>
+
+      <div class="auth-error" id="authError" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ── APP SCREEN ── -->
+  <div class="app-screen" id="appScreen" style="display:none">
+
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">ExamTracker</span>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-tab="subjects"><span class="nav-icon">📚</span> Subjects</button>
+        <button class="nav-btn" data-tab="syllabus"><span class="nav-icon">📋</span> Syllabus</button>
+        <button class="nav-btn" data-tab="todo"><span class="nav-icon">✅</span> To-Do List</button>
+        <button class="nav-btn" data-tab="progress"><span class="nav-icon">📈</span> Progress</button>
+        <button class="nav-btn" data-tab="timer"><span class="nav-icon">⏱</span> Study Timer</button>
+        <button class="nav-btn" data-tab="history"><span class="nav-icon">🕓</span> History</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <div class="user-details">
+            <div class="user-name" id="userName">—</div>
+            <div class="user-email" id="userEmail">—</div>
+          </div>
+        </div>
+        <!-- LOGOUT BUTTON — direct onclick -->
+        <button class="logout-btn" id="logoutBtn" onclick="handleLogout()">⏏ Sign Out</button>
+        <div class="db-status">
+          <span class="status-dot online"></span>
+          <span class="status-text">Supabase</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- ── SUBJECTS ── -->
+      <section class="tab-panel active" id="tab-subjects">
+        <div class="panel-header">
+          <h1>Subjects</h1>
+          <p class="panel-subtitle">Manage your exam subjects</p>
+        </div>
+        <div class="card add-card">
+          <h3>Add New Subject</h3>
+          <div class="form-row">
+            <input type="text" id="subjectName" placeholder="Subject name (e.g. Physics)" class="input-field" />
+            <input type="text" id="subjectCode" placeholder="Code (e.g. PHY101)" class="input-field" />
+            <input type="date" id="subjectExamDate" class="input-field" />
+            <select id="subjectColor" class="input-field">
+              <option value="#FF6B6B">🔴 Red</option>
+              <option value="#4ECDC4">🟢 Teal</option>
+              <option value="#FFE66D">🟡 Yellow</option>
+              <option value="#A8EDEA">🔵 Sky</option>
+              <option value="#FDA7DF">🩷 Pink</option>
+              <option value="#C3F584">🍏 Lime</option>
+            </select>
+            <button class="btn-primary" onclick="addSubject()">+ Add Subject</button>
+          </div>
+        </div>
+        <div class="subjects-grid" id="subjectsList"></div>
+      </section>
+
+      <!-- ── SYLLABUS ── -->
+      <section class="tab-panel" id="tab-syllabus">
+        <div class="panel-header">
+          <h1>Syllabus</h1>
+          <p class="panel-subtitle">Track topics per subject</p>
+        </div>
+        <div class="card add-card">
+          <h3>Add Syllabus Topic</h3>
+          <div class="form-row">
+            <select id="syllabusSubject" class="input-field">
+              <option value="">Select Subject</option>
+            </select>
+            <input type="text" id="syllabusUnit" placeholder="Unit / Chapter" class="input-field" />
+            <input type="text" id="syllabusTopic" placeholder="Topic name" class="input-field" />
+            <select id="syllabusStatus" class="input-field">
+              <option value="pending">⏳ Pending</option>
+              <option value="in-progress">🔄 In Progress</option>
+              <option value="completed">✅ Completed</option>
+            </select>
+            <button class="btn-primary" onclick="addSyllabus()">+ Add Topic</button>
+          </div>
+        </div>
+        <div class="syllabus-filter">
+          <label>Filter by Subject:</label>
+          <select id="syllabusFilter" class="input-field" onchange="renderSyllabus()">
+            <option value="all">All Subjects</option>
+          </select>
+        </div>
+        <div id="syllabusList"></div>
+      </section>
+
+      <!-- ── TODO ── -->
+      <section class="tab-panel" id="tab-todo">
+        <div class="panel-header">
+          <h1>To-Do List</h1>
+          <p class="panel-subtitle">Your daily study tasks</p>
+        </div>
+        <div class="card add-card">
+          <h3>Add Task</h3>
+          <div class="form-row">
+            <input type="text" id="todoTask" placeholder="Task description" class="input-field" />
+            <select id="todoSubject" class="input-field">
+              <option value="">No Subject</option>
+            </select>
+            <input type="date" id="todoDue" class="input-field" />
+            <select id="todoPriority" class="input-field">
+              <option value="low">🟢 Low</option>
+              <option value="medium">🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+            <button class="btn-primary" onclick="addTodo()">+ Add Task</button>
+          </div>
+        </div>
+        <div class="todo-filters">
+          <button class="filter-chip active" onclick="filterTodos(this,'all')">All</button>
+          <button class="filter-chip" onclick="filterTodos(this,'pending')">Pending</button>
+          <button class="filter-chip" onclick="filterTodos(this,'completed')">Completed</button>
+          <button class="filter-chip" onclick="filterTodos(this,'high')">High Priority</button>
+        </div>
+        <div id="todoList"></div>
+      </section>
+
+      <!-- ── PROGRESS ── -->
+      <section class="tab-panel" id="tab-progress">
+        <div class="panel-header">
+          <h1>Progress</h1>
+          <p class="panel-subtitle">Visualize your study progress</p>
+        </div>
+        <div class="progress-grid">
+          <div class="card chart-card">
+            <h3>Study Hours by Subject</h3><canvas id="hoursChart"></canvas>
+          </div>
+          <div class="card chart-card">
+            <h3>Syllabus Completion</h3><canvas id="syllabusChart"></canvas>
+          </div>
+          <div class="card chart-card wide">
+            <h3>Daily Study Activity (Last 14 Days)</h3><canvas id="activityChart"></canvas>
+          </div>
+          <div class="card stats-card">
+            <h3>Summary Stats</h3>
+            <div id="statsGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── TIMER ── -->
+      <section class="tab-panel" id="tab-timer">
+        <div class="panel-header">
+          <h1>Study Timer</h1>
+          <p class="panel-subtitle">Focus sessions with subject tracking</p>
+        </div>
+        <div class="timer-layout">
+          <div class="card timer-card">
+            <select id="timerSubject" class="input-field timer-subject-select">
+              <option value="">Select a subject to study</option>
+            </select>
+            <input type="text" id="timerNote" placeholder="Session note (optional)" class="input-field" />
+            <div class="timer-modes">
+              <button class="mode-btn active" onclick="setTimerMode('stopwatch',this)">Stopwatch</button>
+              <button class="mode-btn" onclick="setTimerMode('pomodoro',this)">Pomodoro (25m)</button>
+              <button class="mode-btn" onclick="setTimerMode('custom',this)">Custom</button>
+            </div>
+            <div id="customTimeInput" style="display:none">
+              <input type="number" id="customMinutes" placeholder="Minutes" min="1" max="300" class="input-field" />
+            </div>
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+            <div class="timer-label" id="timerLabel">Ready to study</div>
+            <div class="timer-controls">
+              <button class="btn-timer start" id="startBtn" onclick="startTimer()">▶ Start</button>
+              <button class="btn-timer pause" id="pauseBtn" onclick="pauseTimer()" disabled>⏸ Pause</button>
+              <button class="btn-timer stop" id="stopBtn" onclick="stopTimer()" disabled>⏹ Stop & Save</button>
+            </div>
+            <div class="pomodoro-status" id="pomodoroStatus"></div>
+          </div>
+          <div class="card todays-card">
+            <h3>Today's Sessions</h3>
+            <div id="todaysSessions"></div>
+            <div class="today-total" id="todayTotal">Total: 0h 0m</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── HISTORY ── -->
+      <section class="tab-panel" id="tab-history">
+        <div class="panel-header">
+          <h1>Study History</h1>
+          <p class="panel-subtitle">All your past study sessions</p>
+        </div>
+        <div class="history-controls">
+          <input type="date" id="historyFrom" class="input-field" />
+          <span>to</span>
+          <input type="date" id="historyTo" class="input-field" />
+          <select id="historySubjectFilter" class="input-field">
+            <option value="all">All Subjects</option>
+          </select>
+          <button class="btn-primary" onclick="loadHistory()">Filter</button>
+          <button class="btn-secondary" onclick="clearHistoryFilters()">Clear</button>
+        </div>
+        <div class="history-summary" id="historySummary"></div>
+        <div id="historyList"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── DEBUG ── -->
+  <div id="debugPanel"
+    style="position:fixed;bottom:0;left:0;right:0;background:#0a0c10;border-top:2px solid #c8f562;z-index:9999;font-family:monospace;font-size:12px;">
+    <div
+      style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #252a38;">
+      <span style="color:#c8f562;font-weight:bold;">🔍 Debug Log</span>
+      <button onclick="document.getElementById('debugPanel').style.display='none'"
+        style="background:#ff6b6b22;border:1px solid #ff6b6b44;color:#ff6b6b;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;">Hide</button>
+    </div>
+    <div id="debugLog" style="max-height:100px;overflow-y:auto;padding:8px 12px;color:#9ca3af;"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
